@@ -17,7 +17,7 @@ const MeasureSchema: Schema = new Schema({
   measure_value: { type: Number, required: true },
   image_url: { type: String, required: true },
   measure_uuid: { type: String, required: true, unique: true },
-  has_confirmed: { type: Boolean, default: false }
+  has_confirmed: { type: Boolean, default: false },
 });
 
 export default mongoose.model<IMeasure>('Measure', MeasureSchema);

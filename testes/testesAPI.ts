@@ -1,13 +1,18 @@
 import request from 'supertest';
-import app from '../src/app/app'; // Importe sua aplicação Express em TypeScript
+import app from '../src/app/app';
 
 describe('Testando a API de leitura de imagens', () => {
   it('Deve retornar sucesso na leitura da imagem', async () => {
     const response = await request(app)
-      .post('/seu-endpoint')  // Substitua pelo endpoint correto
-      .send({ imagem: 'caminho/para/sua/imagem.jpg' });  // Substitua pelo corpo correto da requisição
-    
-    expect(response.status).toBe(200);  // Verifica se o status é 200
-    expect(response.body).toHaveProperty('resultado');  // Verifica se a resposta tem o campo esperado
-  });
+      .post('/measures/upload')
+      .send({
+        image: 'caminho/para/sua/imagem.jpg', // Substitua pelo caminho correto da imagem
+        customer_code: 'customer123',
+        measure_datetime: '2024-08-30T12:00:00Z',
+        measure_type: 'WATER'
+      });
+
+    expect(response.status).toBe(200); // Verifica se o status é 200
+    expect(response.body).toHaveProperty('image_url'); // Verifica se a resposta tem o campo image_url
+  },15000);
 });
