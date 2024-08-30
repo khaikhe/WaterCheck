@@ -4,14 +4,12 @@ import { uploadFileToGemini, getMeasureFromImage } from '../servicos/gemini';
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 
-
-
+// Função para upload
 export const uploadMeasure = async (req: Request, res: Response) => {
   const { customer_code, measure_datetime, measure_type } = req.body;
   const file = req.file;
 
   if (!file || !customer_code || !measure_datetime || !measure_type) {
-  
     if (file) {
       fs.unlinkSync(file.path);
     }
@@ -22,7 +20,6 @@ export const uploadMeasure = async (req: Request, res: Response) => {
   }
 
   try {
-    
     const existingMeasure = await Measure.findOne({
       customer_code,
       measure_type,
@@ -33,7 +30,6 @@ export const uploadMeasure = async (req: Request, res: Response) => {
     });
 
     if (existingMeasure) {
-      // Remove o arquivo
       fs.unlinkSync(file.path);
       return res.status(409).json({
         error_code: "DOUBLE_REPORT",
@@ -41,15 +37,12 @@ export const uploadMeasure = async (req: Request, res: Response) => {
       });
     }
 
-    
     const fileUri = await uploadFileToGemini(file.path, file.mimetype, file.originalname);
 
-    
     fs.unlinkSync(file.path);
 
-    
     const prompt = "Descreva o conteúdo desta imagem."; 
-    const measureValue = await getMeasureFromImage(fileUri, prompt);
+    const measureValue = await getMeasureFromImage(fileUri, file.mimetype, prompt);
 
     const measure_uuid = uuidv4();
 
@@ -70,7 +63,6 @@ export const uploadMeasure = async (req: Request, res: Response) => {
       measure_uuid: newMeasure.measure_uuid
     });
   } catch (error) {
-    
     if (file && fs.existsSync(file.path)) {
       fs.unlinkSync(file.path);
     }
@@ -83,7 +75,7 @@ export const uploadMeasure = async (req: Request, res: Response) => {
   }
 };
 
-
+// Função para confirmação
 export const confirmMeasure = async (req: Request, res: Response) => {
   const { measure_uuid } = req.body;
 
@@ -95,7 +87,6 @@ export const confirmMeasure = async (req: Request, res: Response) => {
   }
 
   try {
-    
     const measure = await Measure.findOne({ measure_uuid });
 
     if (!measure) {
@@ -105,7 +96,6 @@ export const confirmMeasure = async (req: Request, res: Response) => {
       });
     }
 
-  
     measure.confirmed = true;
     await measure.save();
 
@@ -120,12 +110,11 @@ export const confirmMeasure = async (req: Request, res: Response) => {
   }
 };
 
-
+// Função para listar medições
 export const listMeasures = async (req: Request, res: Response) => {
   const { customer_code, start_date, end_date } = req.query;
 
   try {
-    
     const filter: any = {};
     if (customer_code) {
       filter.customer_code = customer_code;

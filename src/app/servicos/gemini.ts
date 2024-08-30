@@ -1,12 +1,17 @@
-
 import dotenv from 'dotenv';
 import { GoogleAIFileManager } from '@google/generative-ai/server';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 dotenv.config();
 
-const GEMINI_API_URL = process.env.GEMINI_API_URL || 'https://api.gemini.com/v1/readimage';
+const GEMINI_API_URL = process.env.GEMINI_API_URL || 'https://generativelanguage.googleapis.com/v1beta/files';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-const fileManager = new GoogleAIFileManager(process.env.GEMINI_API_KEY || '');
+if (!GEMINI_API_KEY) {
+  throw new Error('A variável de ambiente GEMINI_API_KEY não está definida.');
+}
+
+const fileManager = new GoogleAIFileManager(GEMINI_API_KEY);
 
 export const uploadFileToGemini = async (imagePath: string, mimeType: string, displayName: string) => {
   try {
@@ -22,25 +27,28 @@ export const uploadFileToGemini = async (imagePath: string, mimeType: string, di
   }
 };
 
-export const getMeasureFromImage = async (fileUri: string, prompt: string) => {
+export const getMeasureFromImage = async (fileUri: string, mimeType: string, prompt: string) => {
   try {
-    
-    const { GoogleGenerativeAI } = require ("@google/generative-ai");
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY );
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
 
     const result = await model.generateContent([
       {
         fileData: {
-          mimeType: "image/jpeg",
-          fileUri: fileUri
-        }
+          fileUri,
+          mimeType, // Incluindo mimeType aqui
+        },
       },
-      { text: prompt },
+      {
+        text: prompt,
+      },
     ]);
 
-    return result.response.text();
+    console.log(result.response.text()); // Log the response text
+
+    // Extrair a medida da resposta (use a função extractMeasureFromResponse conforme necessário)
+    return result.response.text(); // Retorne o texto para processamento adicional
   } catch (error) {
     console.error('Erro ao obter a medida da imagem:', error);
     throw new Error('Falha ao obter a medida da imagem.');
