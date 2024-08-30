@@ -1,13 +1,15 @@
 {
   "compilerOptions": {
+    "baseUrl": "./",
+    "typeRoots": ["node_modules/@types", "types"],
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
     "esModuleInterop": true,
-    "module": "ESNext",                // Mantém "esnext" para suportar módulos ES
-    "moduleResolution": "node",        // Altera para "node" para garantir a resolução correta dos módulos
+    "module": "commonjs",
+    "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
@@ -18,7 +20,7 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["src/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

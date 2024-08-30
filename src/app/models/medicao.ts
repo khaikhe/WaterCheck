@@ -1,23 +1,25 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IMeasure extends Document {
   customer_code: string;
   measure_datetime: Date;
-  measure_type: 'WATER' | 'GAS';
+  measure_type: string;
   measure_value: number;
   image_url: string;
   measure_uuid: string;
-  has_confirmed: boolean;
+  confirmed?: boolean; // Adicione esta linha
 }
 
-const MeasureSchema: Schema = new Schema({
+const measureSchema: Schema = new Schema({
   customer_code: { type: String, required: true },
   measure_datetime: { type: Date, required: true },
-  measure_type: { type: String, enum: ['WATER', 'GAS'], required: true },
+  measure_type: { type: String, required: true },
   measure_value: { type: Number, required: true },
   image_url: { type: String, required: true },
-  measure_uuid: { type: String, required: true, unique: true },
-  has_confirmed: { type: Boolean, default: false },
+  measure_uuid: { type: String, required: true },
+  confirmed: { type: Boolean, default: false } // Adicione esta linha
 });
 
-export default mongoose.model<IMeasure>('Measure', MeasureSchema);
+const Measure = mongoose.model<IMeasure>('Measure', measureSchema);
+
+export default Measure;

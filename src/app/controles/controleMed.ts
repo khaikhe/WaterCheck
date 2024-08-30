@@ -1,41 +1,64 @@
 import { Request, Response } from 'express';
 import Measure, { IMeasure } from '../models/medicao';
-import { getMeasureFromImage } from '../servicos/gemini';
+import { uploadFileToGemini, getMeasureFromImage } from '../servicos/gemini';
 import { v4 as uuidv4 } from 'uuid';
+import fs from 'fs';
+
+
 
 export const uploadMeasure = async (req: Request, res: Response) => {
-  const { image, customer_code, measure_datetime, measure_type } = req.body;
+  const { customer_code, measure_datetime, measure_type } = req.body;
+  const file = req.file;
 
-  if (!image || !customer_code || !measure_datetime || !measure_type) {
+  if (!file || !customer_code || !measure_datetime || !measure_type) {
+  
+    if (file) {
+      fs.unlinkSync(file.path);
+    }
     return res.status(400).json({
       error_code: "INVALID_DATA",
-      error_description: "Parâmetros inválidos."
-    });
-  }
-
-  const existingMeasure = await Measure.findOne({
-    customer_code,
-    measure_type,
-    measure_datetime: { $gte: new Date(new Date(measure_datetime).getFullYear(), new Date(measure_datetime).getMonth(), 1) }
-  });
-
-  if (existingMeasure) {
-    return res.status(409).json({
-      error_code: "DOUBLE_REPORT",
-      error_description: "Leitura do mês já realizada."
+      error_description: "Parâmetros inválidos ou arquivo ausente."
     });
   }
 
   try {
-    const geminiResponse = await getMeasureFromImage(image);
+    
+    const existingMeasure = await Measure.findOne({
+      customer_code,
+      measure_type,
+      measure_datetime: { 
+        $gte: new Date(new Date(measure_datetime).getFullYear(), new Date(measure_datetime).getMonth(), 1),
+        $lt: new Date(new Date(measure_datetime).getFullYear(), new Date(measure_datetime).getMonth() + 1, 1)
+      }
+    });
+
+    if (existingMeasure) {
+      // Remove o arquivo
+      fs.unlinkSync(file.path);
+      return res.status(409).json({
+        error_code: "DOUBLE_REPORT",
+        error_description: "Leitura do mês já realizada."
+      });
+    }
+
+    
+    const fileUri = await uploadFileToGemini(file.path, file.mimetype, file.originalname);
+
+    
+    fs.unlinkSync(file.path);
+
+    
+    const prompt = "Descreva o conteúdo desta imagem."; 
+    const measureValue = await getMeasureFromImage(fileUri, prompt);
+
     const measure_uuid = uuidv4();
 
     const newMeasure: IMeasure = new Measure({
       customer_code,
       measure_datetime,
       measure_type,
-      measure_value: geminiResponse.value,
-      image_url: geminiResponse.image_url,
+      measure_value: measureValue, 
+      image_url: fileUri,
       measure_uuid
     });
 
@@ -46,84 +69,81 @@ export const uploadMeasure = async (req: Request, res: Response) => {
       measure_value: newMeasure.measure_value,
       measure_uuid: newMeasure.measure_uuid
     });
-} catch (error) {
-    if (error instanceof Error) {
-        res.status(500).json({ error: error.message });
-    } else {
-        res.status(500).json({ error: 'Erro desconhecido.' });
+  } catch (error) {
+    
+    if (file && fs.existsSync(file.path)) {
+      fs.unlinkSync(file.path);
     }
-}
 
+    if (error instanceof Error) {
+      res.status(500).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: 'Erro desconhecido.' });
+    }
+  }
 };
+
 
 export const confirmMeasure = async (req: Request, res: Response) => {
-  const { measure_uuid, confirmed_value } = req.body;
+  const { measure_uuid } = req.body;
 
-  const measure = await Measure.findOne({ measure_uuid });
-
-  if (!measure) {
-    return res.status(404).json({
-      error_code: "MEASURE_NOT_FOUND",
-      error_description: "Leitura não encontrada."
+  if (!measure_uuid) {
+    return res.status(400).json({
+      error_code: "INVALID_DATA",
+      error_description: "UUID da medição ausente."
     });
   }
 
-  if (measure.has_confirmed) {
-    return res.status(409).json({
-      error_code: "CONFIRMATION_DUPLICATE",
-      error_description: "Leitura já confirmada."
+  try {
+    
+    const measure = await Measure.findOne({ measure_uuid });
+
+    if (!measure) {
+      return res.status(404).json({
+        error_code: "NOT_FOUND",
+        error_description: "Medição não encontrada."
+      });
+    }
+
+  
+    measure.confirmed = true;
+    await measure.save();
+
+    res.status(200).json({
+      message: "Medição confirmada com sucesso.",
+      measure
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Erro desconhecido.'
     });
   }
-
-  measure.measure_value = confirmed_value;
-  measure.has_confirmed = true;
-  await measure.save();
-
-  res.status(200).json({ success: true });
 };
 
+
 export const listMeasures = async (req: Request, res: Response) => {
-  const { customer_code } = req.params;
-  const { measure_type } = req.query;
+  const { customer_code, start_date, end_date } = req.query;
 
-  const filter: any = { customer_code };
-
-  if (measure_type) {
-    if (typeof measure_type === 'string') {
-        if (['WATER', 'GAS'].includes(measure_type.toUpperCase())) {
-            filter.measure_type = measure_type.toUpperCase();
-        } else {
-            return res.status(400).json({
-                error_code: "INVALID_TYPE",
-                error_description: "Tipo de medição não permitida."
-            });
-        }
-    } else {
-        return res.status(400).json({
-            error_code: "INVALID_TYPE",
-            error_description: "Tipo de medição não permitida."
-        });
+  try {
+    
+    const filter: any = {};
+    if (customer_code) {
+      filter.customer_code = customer_code;
     }
-}
+    if (start_date && end_date) {
+      filter.measure_datetime = { 
+        $gte: new Date(start_date as string),
+        $lt: new Date(end_date as string)
+      };
+    }
 
+    // Busca as medições
+    const measures = await Measure.find(filter);
 
-  const measures = await Measure.find(filter);
-
-  if (measures.length === 0) {
-    return res.status(404).json({
-      error_code: "MEASURES_NOT_FOUND",
-      error_description: "Nenhuma leitura encontrada."
+    res.status(200).json(measures);
+  } catch (error) {
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Erro desconhecido.'
     });
   }
-
-  res.status(200).json({
-    customer_code,
-    measures: measures.map(measure => ({
-      measure_uuid: measure.measure_uuid,
-      measure_datetime: measure.measure_datetime,
-      measure_type: measure.measure_type,
-      has_confirmed: measure.has_confirmed,
-      image_url: measure.image_url
-    }))
-  });
 };

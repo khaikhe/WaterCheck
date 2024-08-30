@@ -5,6 +5,7 @@ const config: Config = {
   testEnvironment: 'node',
   moduleFileExtensions: ['ts', 'js'],
   testMatch: ['**/testes/**/*.ts'],
+  setupFiles: ['dotenv/config'], // Adicione esta linha
 };
 
 export default config;
