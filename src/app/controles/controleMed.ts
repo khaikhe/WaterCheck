@@ -1,8 +1,9 @@
 import { Request, Response } from 'express';
 import Measure, { IMeasure } from '../models/medicao';
-import { uploadFileToGemini, getMeasureFromImage } from '../servicos/gemini';
+import { uploadFileToGemini } from '../servicos/gemini';
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
+import { getMeasureFromImage } from '../servicos/gemini';
 
 
 export const uploadMeasure = async (req: Request, res: Response) => {

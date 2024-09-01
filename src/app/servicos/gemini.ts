@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import { GoogleAIFileManager } from '@google/generative-ai/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { generatePrompt } from '../../utils/promptHelper';
 
 dotenv.config();
 
@@ -27,17 +28,20 @@ export const uploadFileToGemini = async (imagePath: string, mimeType: string, di
   }
 };
 
-export const getMeasureFromImage = async (fileUri: string, mimeType: string, prompt: string) => {
+export const getMeasureFromImage = async (fileUri: string, mimeType: string, documentType: string) => {
   try {
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
 
+    const prompt = generatePrompt(documentType);
+
     const result = await model.generateContent([
       {
         fileData: {
           fileUri,
-          mimeType, 
+          mimeType,
+          
         },
       },
       {
