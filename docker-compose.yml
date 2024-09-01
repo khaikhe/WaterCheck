@@ -7,8 +7,8 @@ services:
       - "3000:3000"
     environment:
       - PORT=3000
-      - MONGO_URI=mongodb://mongo:27017/mydatabase
-      - GEMINI_API_KEY=AIzaSyDy4lDrrvsggKhKFmWAMBIBgKr9UHBUZTs
+      - MONGO_URI=mongodb://localhost:27017/
+      - GEMINI_API_KEY=
     depends_on:
       - mongo
 

@@ -37,7 +37,7 @@ export const getMeasureFromImage = async (fileUri: string, mimeType: string, pro
       {
         fileData: {
           fileUri,
-          mimeType, // Incluindo mimeType aqui
+          mimeType, 
         },
       },
       {
@@ -45,10 +45,9 @@ export const getMeasureFromImage = async (fileUri: string, mimeType: string, pro
       },
     ]);
 
-    console.log(result.response.text()); // Log the response text
-
-    // Extrair a medida da resposta (use a função extractMeasureFromResponse conforme necessário)
-    return result.response.text(); // Retorne o texto para processamento adicional
+    console.log(result.response.text()); 
+   
+    return result.response.text(); 
   } catch (error) {
     console.error('Erro ao obter a medida da imagem:', error);
     throw new Error('Falha ao obter a medida da imagem.');

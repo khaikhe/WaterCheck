@@ -4,7 +4,7 @@ import { uploadFileToGemini, getMeasureFromImage } from '../servicos/gemini';
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 
-// Função para upload
+
 export const uploadMeasure = async (req: Request, res: Response) => {
   const { customer_code, measure_datetime, measure_type } = req.body;
   const file = req.file;
@@ -38,11 +38,22 @@ export const uploadMeasure = async (req: Request, res: Response) => {
     }
 
     const fileUri = await uploadFileToGemini(file.path, file.mimetype, file.originalname);
-
     fs.unlinkSync(file.path);
 
-    const prompt = "Descreva o conteúdo desta imagem."; 
-    const measureValue = await getMeasureFromImage(fileUri, file.mimetype, prompt);
+    const prompt = "Descreva o conteúdo desta imagem.";
+    const description = await getMeasureFromImage(fileUri, file.mimetype, prompt);
+
+    // Extração do valor da fatura
+    const regex = /R\$ (\d+,\d+)/;
+    const match = description.match(regex);
+    const measureValue = match ? parseFloat(match[1].replace(',', '.')) : null;
+
+    if (measureValue === null) {
+      return res.status(400).json({
+        error_code: "NO_MEASURE_FOUND",
+        error_description: "Nenhum valor de medição encontrado na imagem."
+      });
+    }
 
     const measure_uuid = uuidv4();
 
@@ -50,7 +61,7 @@ export const uploadMeasure = async (req: Request, res: Response) => {
       customer_code,
       measure_datetime,
       measure_type,
-      measure_value: measureValue, 
+      measure_value: measureValue,
       image_url: fileUri,
       measure_uuid
     });
@@ -75,7 +86,7 @@ export const uploadMeasure = async (req: Request, res: Response) => {
   }
 };
 
-// Função para confirmação
+// Função para confirmação de uma medição
 export const confirmMeasure = async (req: Request, res: Response) => {
   const { measure_uuid } = req.body;
 
