@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 import { GoogleAIFileManager } from '@google/generative-ai/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { generatePrompt } from '../../utils/promptHelper';
+
 
 dotenv.config();
 
@@ -34,7 +34,6 @@ export const getMeasureFromImage = async (fileUri: string, mimeType: string, doc
 
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
 
-    const prompt = generatePrompt(documentType);
 
     const result = await model.generateContent([
       {
@@ -43,9 +42,6 @@ export const getMeasureFromImage = async (fileUri: string, mimeType: string, doc
           mimeType,
           
         },
-      },
-      {
-        text: prompt,
       },
     ]);
 

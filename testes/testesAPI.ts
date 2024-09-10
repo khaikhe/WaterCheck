@@ -3,49 +3,45 @@ import dotenv from 'dotenv';
 import path from 'path';
 import request from 'supertest';
 import fs from 'fs';
-import app from '../src/app/app';
+import { app, server } from '../src/app/app'; // Importar a instância do servidor
 
 dotenv.config();
 
-let server: any;
-
 beforeAll(async () => {
- 
   if (mongoose.connection.readyState === 0) { // Conexão fechada
     await mongoose.connect(process.env.DB_URI_TEST || 'mongodb://localhost:27017/');
   }
 
-  
-  server = app.listen(process.env.PORT || 3000, () => {
-    console.log('Test server running');
-  });
+  // Não é necessário criar um servidor aqui, pois já está sendo exportado
 });
 
 afterAll(async () => {
-  if (mongoose.connection.readyState !== 0) { // Conexão aberta
+  if (mongoose.connection.readyState !== 0) { 
     await mongoose.connection.close();
+  }
+  if (server) {
+    server.close(); // Fecha o servidor após o teste
   }
 });
 
 describe('Testando a API de leitura de imagens', () => {
   it('Deve retornar sucesso na leitura da imagem', async () => {
-    const imagePath = path.resolve(__dirname, '../public/teste12.jpeg'); 
-  
-   
+    const imagePath = path.resolve(__dirname, '../uploads/testes1234.jpg'); 
+
     if (!fs.existsSync(imagePath)) {
       throw new Error('O arquivo da imagem de teste não foi encontrado.');
     }
-  
+
+    const uniqueDate = new Date().toISOString(); // Gera uma data única para evitar conflitos
     const response = await request(app)
-      .post('/measures/upload')
-      .attach('image', imagePath) 
+      .post('/controles/upload')
+      .attach('image', imagePath)
       .field('customer_code', 'customer123')
-      .field('measure_datetime', '2024-08-30T12:00:00Z')
+      .field('measure_datetime', uniqueDate)
       .field('measure_type', 'WATER');
-  
-    console.log('Response:', response.body); 
-    console.error('Error:', response.error); 
-  
+
+    console.log(response.body); // Debugging
+
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty('image_url');
     expect(response.body).toHaveProperty('measure_value');

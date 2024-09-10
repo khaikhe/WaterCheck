@@ -7,7 +7,7 @@ export interface IMeasure extends Document {
   measure_value: number;
   image_url: string;
   measure_uuid: string;
-  confirmed?: boolean; // Adicione esta linha
+  confirmed?: boolean; 
 }
 
 const measureSchema: Schema = new Schema({
@@ -17,7 +17,7 @@ const measureSchema: Schema = new Schema({
   measure_value: { type: Number, required: true },
   image_url: { type: String, required: true },
   measure_uuid: { type: String, required: true },
-  confirmed: { type: Boolean, default: false } // Adicione esta linha
+  confirmed: { type: Boolean, default: false } 
 });
 
 const Measure = mongoose.model<IMeasure>('Measure', measureSchema);

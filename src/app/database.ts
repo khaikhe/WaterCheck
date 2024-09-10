@@ -7,7 +7,7 @@ const DB_URI = process.env.DB_URI || 'mongodb://localhost:27017/';
 
 const connectDB = async () => {
   try {
-    await mongoose.connect(DB_URI); // Não é mais necessário passar opções como useNewUrlParser
+    await mongoose.connect(DB_URI); 
     console.log('Connected to MongoDB');
   } catch (error) {
     if( error instanceof Error)

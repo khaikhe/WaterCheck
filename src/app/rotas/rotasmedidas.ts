@@ -10,7 +10,7 @@ router.post('/upload', upload.single('image'), uploadMeasure);
 // Endpoint para confirmação de uma medição
 router.patch('/confirm', confirmMeasure);
 
-// Endpoint para listar medições de um cliente específico
+// Endpoint para listar medições de um cliente específico com filtragem por data opcional
 router.get('/:customer_code/list', listMeasures);
 
 export default router;

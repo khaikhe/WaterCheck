@@ -5,7 +5,6 @@ import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 import { getMeasureFromImage } from '../servicos/gemini';
 
-
 export const uploadMeasure = async (req: Request, res: Response) => {
   const { customer_code, measure_datetime, measure_type } = req.body;
   const file = req.file;
@@ -41,20 +40,20 @@ export const uploadMeasure = async (req: Request, res: Response) => {
     const fileUri = await uploadFileToGemini(file.path, file.mimetype, file.originalname);
     fs.unlinkSync(file.path);
 
-    const prompt = "Descreva o conteúdo desta imagem.";
+    const prompt = "Descreva o conteúdo desta imagem de cálculos matemáticos.";
     const description = await getMeasureFromImage(fileUri, file.mimetype, prompt);
 
-    // Extração do valor da fatura
-    const regex = /R\$ (\d+,\d+)/;
-    const match = description.match(regex);
-    const measureValue = match ? parseFloat(match[1].replace(',', '.')) : null;
+    const calculations = extractCalculationsFromDescription(description);
 
-    if (measureValue === null) {
+    if (!calculations || calculations.length === 0) {
       return res.status(400).json({
         error_code: "NO_MEASURE_FOUND",
-        error_description: "Nenhum valor de medição encontrado na imagem."
+        error_description: "Nenhum cálculo matemático encontrado na imagem."
       });
     }
+
+    // Use um único valor, por exemplo, a soma de todos os valores
+    const measureValue = calculations.reduce((acc, curr) => acc + curr, 0);
 
     const measure_uuid = uuidv4();
 
@@ -62,7 +61,7 @@ export const uploadMeasure = async (req: Request, res: Response) => {
       customer_code,
       measure_datetime,
       measure_type,
-      measure_value: measureValue,
+      measure_value: measureValue, // Armazena como um único número
       image_url: fileUri,
       measure_uuid
     });
@@ -87,7 +86,15 @@ export const uploadMeasure = async (req: Request, res: Response) => {
   }
 };
 
-// Função para confirmação de uma medição
+const extractCalculationsFromDescription = (description: string): number[] => {
+  // Adapte o regex para capturar números e cálculos
+  const calculationRegex = /\d+(?:[\+\-\*\/]\d+)*/g;
+  const matches = description.match(calculationRegex);
+
+  // Converte os cálculos para valores numéricos, se possível
+  return matches ? matches.map(calc => eval(calc)) : [];
+};
+
 export const confirmMeasure = async (req: Request, res: Response) => {
   const { measure_uuid } = req.body;
 
@@ -122,7 +129,6 @@ export const confirmMeasure = async (req: Request, res: Response) => {
   }
 };
 
-// Função para listar medições
 export const listMeasures = async (req: Request, res: Response) => {
   const { customer_code, start_date, end_date } = req.query;
 
@@ -138,7 +144,6 @@ export const listMeasures = async (req: Request, res: Response) => {
       };
     }
 
-    // Busca as medições
     const measures = await Measure.find(filter);
 
     res.status(200).json(measures);
